@@ -1,0 +1,13 @@
+.uppercase {
+    text-transform: uppercase;
+}
+.center {
+    text-align: center;
+}
+.primary {
+    color: var(--primary-color);
+}
+
+.w-100 {
+    width: 100%;
+}

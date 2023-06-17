@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+@import url('./headers.css');
+@import url('./utils.css');
+
+:root {
+    --primary-color: #EB8A90;
+    --secondary-color: #31572C;
+    --text-color: #353B3C;
+    --background-color: #EEF0F2;
+
+    --fk-color-primary: var(--secondary-color) !important;
+}
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Lato', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color)
+}
+
+.formkit-label {
+    background-color: var(--background-color) !important;
+}
