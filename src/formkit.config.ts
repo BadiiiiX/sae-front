@@ -2,9 +2,9 @@
 
 import {fr} from '@formkit/i18n'
 import {DefaultConfigOptions} from '@formkit/vue'
-import {createFloatingLabelsPlugin} from '@formkit/addons'
+import {createFloatingLabelsPlugin, createAutoAnimatePlugin} from '@formkit/addons'
 import {genesisIcons} from '@formkit/icons'
-import { createProPlugin, datepicker, taglist} from '@formkit/pro'
+import {createProPlugin, datepicker, taglist, transferlist} from '@formkit/pro'
 
 import '@formkit/themes/genesis'
 import '@formkit/addons/css/floatingLabels'
@@ -20,11 +20,13 @@ export const config: DefaultConfigOptions = {
     },
     plugins: [
         createFloatingLabelsPlugin({
-        useAsDefault: true, // defaults to false
-    }),
+            useAsDefault: true, // defaults to false
+        }),
         createProPlugin(import.meta.env.VITE_FORM_KIT, {
             datepicker,
-            taglist
-        })
+            taglist,
+            transferlist
+        }),
+        createAutoAnimatePlugin()
     ]
 }

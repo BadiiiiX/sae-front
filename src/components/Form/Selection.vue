@@ -1,9 +1,68 @@
 <script setup lang="ts">
-const carBrands=[{label:"Audi",value:"audi"},{label:"BMW",value:"bmw"},{label:"Citroen",value:"citroen"},{label:"Dacia",value:"dacia"},{label:"Fiat",value:"fiat"},{label:"Ford",value:"ford"},{label:"Ferrari",value:"ferrari"},{label:"Honda",value:"honda"},{label:"Hyundai",value:"hyundai"},{label:"Jaguar",value:"jaguar"},{label:"Jeep",value:"jeep"},{label:"Kia",value:"kia"},{label:"Land Rover",value:"land rover"},{label:"Mazda",value:"mazda"},{label:"Mercedes",value:"mercedes"},{label:"Mini",value:"mini"},{label:"Mitsubishi",value:"mitsubishi"},{label:"Nissan",value:"nissan"},{label:"Opel",value:"opel"},{label:"Peugeot",value:"peugeot"},{label:"Porsche",value:"porsche"},{label:"Renault",value:"renault"},{label:"Saab",value:"saab"},{label:"Skoda",value:"skoda"},{label:"Subaru",value:"subaru"},{label:"Suzuki",value:"suzuki"},{label:"Toyota",value:"toyota"},{label:"Volkswagen",value:"volkswagen"},{label:"Volvo",value:"volvo"}]
+
+import {onMounted, reactive, ref} from "vue";
+import axios from "axios";
+import {computedAsync, useAsyncState} from "@vueuse/core";
+
+const apiUrl = "http://localhost:3000";
+
+const {state: categories, isReady: categoriesIsReady, isLoading: categoriesIsLoading} = useAsyncState(
+    axios
+        .get(`${apiUrl}/category/all`)
+        .then(t => t.data),
+    [],
+    {immediate: true},
+)
+
+const {state: aliments, isReady: alimentsIsReady, isLoading: alimentsIsLoading} = useAsyncState(
+    axios
+        .get(`${apiUrl}/aliment/all`)
+        .then(t => t.data),
+    [],
+    {immediate: true},
+)
+
+const chosenCategories = ref([]);
+
+const alimentsToShow = ref([]);
+
+const getCategories = () => {
+  return categories.value.map(t => {
+    return {
+      label: t.name,
+      value: t.code
+    }
+  })
+}
+
+const getAliments = () => {
+  if(chosenCategories.value.length === 0) {
+    return [];
+  }
+  const res = aliments.value
+      .filter(t => { return chosenCategories.value.includes(t.category.code) || chosenCategories.value.includes(t.subCategory.code) || chosenCategories.value.includes(t.subSubCategory.code) })
+      .map(t => {
+        return {
+          label: t.name,
+          value: t.code
+        }
+      })
+  console.log(chosenCategories.value);
+  console.log(res);
+
+  return res
+}
+
 </script>
 
 <template>
-  <h2 class="uppercase">Vos choix</h2>
+  <header>
+    <h2 class="uppercase">Vos choix</h2>
+    <h3 class="justify">Afin de remplir le formulaire, veuillez choisir vos dix aliments préférés.</h3>
+  </header>
+
+  <pre>{{alimentsToShow}}</pre>
+
 
   <FormKit
       type="form"
@@ -11,17 +70,40 @@ const carBrands=[{label:"Audi",value:"audi"},{label:"BMW",value:"bmw"},{label:"C
       :actions="false"
   >
     <FormKit
+        v-if="categoriesIsReady"
         type="taglist"
-        name="car_brands"
-        label="Search for your favorite car brands"
-        :options="carBrands"
-        :value="['honda', 'toyota']"
+        name="categoryFilter"
+        label="Filtrez par catégorie"
+        :options="getCategories"
+        v-model="chosenCategories"
+        :close-on-select="false"
+        @input="alimentsToShow = getAliments()"
     />
-    <pre wrap>{{ value }}</pre>
-  </FormKit>
 
+    <FormKit
+        name="aliments"
+        type="transferlist"
+        help="Veuillez filtrer par la catégorie que vous souhaitez avant de sélectionner vos aliments."
+        source-label="Aliments"
+        target-label="Vos Aliments"
+        source-empty-message="Aucun aliment, chargement en cours..."
+        target-empty-message="Choisissez vos aliments favoris"
+        searchable
+        :options="alimentsToShow"
+        max="10"
+        placeholder="Sélectionnez vos aliments"
+    />
+
+  </FormKit>
 </template>
 
 <style scoped>
+header {
+  width: 80%;
+  margin: 0 auto 6rem;
+}
 
+h3 {
+  line-height: 1.5em;
+}
 </style>

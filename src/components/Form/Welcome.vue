@@ -12,7 +12,7 @@ const next = () => {
 <template>
   <header>
     <h1 class="uppercase center">Sondage</h1>
-    <h3>
+    <h3 class="justify">
       Dans le cadre de cette enquête, nous souhaitons recueillir les préférences culinaires de nos utilisateurs.
       <br>Votre contribution nous permettra de mieux comprendre vos goûts et de mieux vous servir. Merci d'avance !
     </h3>

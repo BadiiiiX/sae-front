@@ -28,7 +28,11 @@ const ageRule = (birthDate: any) => {
 
 <template>
 
-  <h2 class="uppercase">À Propos de vous</h2>
+  <header>
+    <h2 class="uppercase center">À Propos de vous</h2>
+    <h3 class="justify">Avant de commencer le sondage, nous avons besoin de savoir qui vous êtes.
+      <br> Pour certaines raisons statistique, vous ne pouvez pas participer plusieurs fois au sondage.</h3>
+  </header>
 
   <FormKit type="form" @submit="next">
 
@@ -73,7 +77,12 @@ const ageRule = (birthDate: any) => {
 </template>
 
 <style scoped>
-h2 {
-  margin-bottom: 8rem;
+header {
+  width: 80%;
+  margin: 0 auto 6rem;
+}
+
+h3 {
+  line-height: 1.5em;
 }
 </style>
