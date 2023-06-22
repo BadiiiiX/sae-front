@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import {onMounted, reactive, ref, watchEffect} from "vue";
+import {nextTick, onMounted, reactive, ref, watchEffect} from "vue";
 import axios from "axios";
 import {computedAsync, useAsyncState} from "@vueuse/core";
 
@@ -11,6 +11,8 @@ const selectedSubCategory = ref(null);
 const selectedSubSubCategory = ref(null);
 const haveSubElements = ref(false);
 const selectedAliments = ref([]);
+const alimentList = ref([]);
+const subCategoryHaveSubSubCategories = [];
 
 const {state: categories, isReady: categoriesIsReady, isLoading: categoriesIsLoading} = useAsyncState(
     axios
@@ -48,9 +50,12 @@ const getSubCategories = computedAsync(() => subCategories.value
     })
     .map((t: any) => ({label: t.name, value: t.code})));
 
-const getSubSubCategories = (() => subSubCategories.value
+const getSubSubCategories = computedAsync(() => subSubCategories.value
     .filter((t: any) => {
       if (Array.isArray(selectedSubCategory.value)) {
+        if ((selectedSubCategory.value as any[]).includes(t.code.slice(0, 4))) {
+          subCategoryHaveSubSubCategories.push(t.code.slice(0, 4))
+        }
         return (selectedSubCategory.value as any[]).includes(t.code.slice(0, 4))
       }
 
@@ -58,26 +63,23 @@ const getSubSubCategories = (() => subSubCategories.value
     })
     .map((t: any) => ({label: t.name, value: t.code})));
 
-const getAliments = () => {
-  const getLastCode = (selectedSubSubCategory.value === null || selectedSubSubCategory.value.length <= 0)
-      ? selectedSubCategory.value
-      : selectedSubSubCategory.value;
+const getAliments = computedAsync(() => {
 
-  const result = [];
+  selectedSubCategory.value ??= [];
+  selectedSubSubCategory.value ??= [];
 
-  for(const code of getLastCode) {
-    const {state, isReady, isLoading} = useAsyncState(
-        axios
-            .get(`${apiUrl}/aliment/search/${code}`)
-            .then(t => t.data),
-        []
-    )
+  const codes = [...selectedSubCategory.value, ...selectedSubSubCategory.value];
 
-    result.push(...state.value)
-  }
+  const r = [];
 
-  return result;
-}
+  codes.filter(code => !subCategoryHaveSubSubCategories.includes(code))
+      .forEach(async c => {
+        const res = await axios.get(`${apiUrl}/aliment/search/${c}`);
+        r.push(...res.data.map((t: any) => ({label: t.name, value: t.code})))
+      })
+
+  return r;
+});
 
 const resetIfEmpty = (v: string[], _node: any) => {
   if (v === null || v.length === 0) {
@@ -88,7 +90,13 @@ const resetIfEmpty = (v: string[], _node: any) => {
 
 watchEffect(() => {
   selectedSubCategory.value;
-  haveSubElements.value = getSubSubCategories().length > 0;
+
+  if (getSubSubCategories.value === undefined) {
+    haveSubElements.value = false
+    return;
+  }
+
+  haveSubElements.value = getSubSubCategories.value.length > 0
 })
 </script>
 
@@ -137,9 +145,12 @@ watchEffect(() => {
         v-if="selectedSubCategory !== null && selectedSubCategory.length > 0 && (!haveSubElements || selectedSubSubCategory !== null && selectedSubSubCategory.length > 0)"
         type="transferlist"
         name="aliments"
-        v-model="selectedAliments"
         label="Choisissez vos aliments"
-        :options="getAliments"
+        :options="() => {
+          console.log(getAliments)
+          return getAliments;
+        }"
+        }
         max="10"
     />
 
@@ -147,6 +158,7 @@ watchEffect(() => {
       {{ selectedCategory }}
       {{ selectedSubCategory }}
       {{ selectedSubSubCategory }}
+      {{ getAliments }}
     </pre>
 
   </FormKit>

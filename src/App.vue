@@ -11,20 +11,9 @@ const nextForm = () => {
   form.value++;
 }
 
-const plus = () => {
-  form.value++;
-}
-
-const minus = () => {
-  form.value--;
-}
-
 </script>
 
 <template>
-
-  <button @click="minus">- 1</button>
-  <button @click="plus">+ 1</button>
 
   <div v-auto-animate>
     <Welcome v-if="form === 0" @next="nextForm"/>
