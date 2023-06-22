@@ -4,8 +4,14 @@ import {defineEmits} from "vue/dist/vue";
 import {ref} from "vue";
 import axios from "axios";
 
-const definedEmail = ref(null);
+const AGE_LIMIT = 10;
 
+const enteredFirstName = ref("");
+const enteredLastName = ref("");
+const enteredMail = ref("");
+const enteredBirthDate = ref("");
+
+const props = defineProps(['formData'])
 const emit = defineEmits(["next"]);
 
 const next = () => {
@@ -23,7 +29,7 @@ const calcAge = (birthdate: Date): number => {
 }
 
 const ageRule = (birthDate: any) => {
-  return calcAge(new Date(birthDate.value)) >= 12
+  return calcAge(new Date(birthDate.value)) >= AGE_LIMIT
 }
 
 const addressExists = async (address: any) => {
@@ -49,21 +55,23 @@ const addressExists = async (address: any) => {
 }
 
 const goNext = async () => {
-
   let res;
 
   try {
-    res = await axios.get(`${import.meta.env.VITE_API_URL}/user/${definedEmail.value}`);
+    res = await axios.get(`${import.meta.env.VITE_API_URL}/user/${enteredMail.value}`);
   } catch (err) {
     res = err.response;
-  } finally {
-    console.log(res);
+  }
+
+  props.formData.user = {
+    firstName: enteredFirstName.value,
+    lastName: enteredLastName.value,
+    email: enteredMail.value,
+    birthDate: enteredBirthDate.value.split('T')[0],
   }
 
   next();
 }
-
-//TODO Verify if email exists & save it for later
 
 </script>
 
@@ -72,30 +80,35 @@ const goNext = async () => {
   <header>
     <h2 class="uppercase center">À Propos de vous</h2>
     <h3 class="justify">Avant de commencer le sondage, nous avons besoin de savoir qui vous êtes.
-      <br> Pour certaines raisons statistique, vous ne pouvez pas participer plusieurs fois au sondage.</h3>
+      <br> Pour certaines raisons statistiques, vous ne pouvez pas participer plusieurs fois au sondage.</h3>
   </header>
 
-  <FormKit type="form" @submit="goNext">
+  <FormKit
+      type="form"
+      :actions="false"
+      @submit="goNext"
+  >
 
     <FormKit
         type="text"
         label="Entrez votre prénom"
-        help="Veuillez entrer votre prénom"
+        v-model="enteredFirstName"
         validation="required"
         validation-visbility="live"/>
 
     <FormKit
+        v-if="enteredFirstName !== ''"
         type="text"
         label="Entrez votre nom"
-        help="Veuillez entrer votre nom"
+        v-model="enteredLastName"
         validation="required"
         validation-visbility="live"/>
 
     <FormKit
         type="email"
+        v-if="enteredLastName !== ''"
         label="Entrez votre adresse email"
-        help="Veuillez entrer votre addresse email"
-        v-model="definedEmail"
+        v-model="enteredMail"
         validation="required|email|addressExists"
         validation-visbility="live"
         :validation-messages="{
@@ -106,17 +119,27 @@ const goNext = async () => {
 
     <FormKit
         type="datepicker"
+        v-if="enteredMail !== ''"
         name="date"
         format="DD/MM/YYYY"
         label="Date de naissance"
+        v-model="enteredBirthDate"
         validation="required|ageRule"
         :validation-messages="{
-          ageRule: 'Vous devez avoir au moins 12 ans pour participer au sondage'
+          ageRule: `Vous devez avoir au moins ${AGE_LIMIT} ans pour participer au sondage`
         }"
         :validation-rules="{ageRule}"
-        help="Veuillez entrer votre date de naissance"
         overlay
     />
+
+    <div class="center full-width">
+      <FormKit
+          v-if="enteredBirthDate !== ''"
+          type="submit"
+          prefix-icon="check"
+          label="Suivant"
+      />
+    </div>
 
   </FormKit>
 

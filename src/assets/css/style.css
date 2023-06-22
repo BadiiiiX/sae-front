@@ -30,3 +30,14 @@ body {
 .formkit-label {
     background-color: var(--background-color) !important;
 }
+
+.formkit-wrapper {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.formkit-message {
+    text-align: center;
+    font-weight: 700!important;
+}

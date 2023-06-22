@@ -1,22 +1,35 @@
 <script setup lang="ts">
 
-import {nextTick, onMounted, reactive, ref, watchEffect} from "vue";
+import {defineEmits, ref, watchEffect} from "vue";
 import axios from "axios";
-import {computedAsync, useAsyncState} from "@vueuse/core";
+import {asyncComputed, computedAsync, useAsyncState} from "@vueuse/core";
 
-const apiUrl = "http://localhost:3000";
+const emit = defineEmits(["next"]);
+
+const next = () => {
+  emit("next");
+}
 
 const selectedCategory = ref(null);
 const selectedSubCategory = ref(null);
 const selectedSubSubCategory = ref(null);
 const haveSubElements = ref(false);
 const selectedAliments = ref([]);
-const alimentList = ref([]);
 const subCategoryHaveSubSubCategories = [];
+
+const props = defineProps(['formData'])
+
+const {state: aliments, isReady: alimentsIsReady, isLoading: alimentsIsLoading} = useAsyncState(
+    axios
+        .get(`${import.meta.env.VITE_API_URL}/aliment/all`)
+        .then(t => t.data),
+    [],
+    {immediate: true},
+)
 
 const {state: categories, isReady: categoriesIsReady, isLoading: categoriesIsLoading} = useAsyncState(
     axios
-        .get(`${apiUrl}/category/all`)
+        .get(`${import.meta.env.VITE_API_URL}/category/all`)
         .then(t => t.data),
     [],
     {immediate: true},
@@ -24,7 +37,7 @@ const {state: categories, isReady: categoriesIsReady, isLoading: categoriesIsLoa
 
 const {state: subCategories, isReady: subCategoriesIsReady, isLoading: subCategoriesIsLoading} = useAsyncState(
     axios
-        .get(`${apiUrl}/subcategory/all`)
+        .get(`${import.meta.env.VITE_API_URL}/subcategory/all`)
         .then(t => t.data),
     [],
     {immediate: true},
@@ -32,7 +45,7 @@ const {state: subCategories, isReady: subCategoriesIsReady, isLoading: subCatego
 
 const {state: subSubCategories, isReady: subSubCategoriesIsReady, isLoading: subSubCategoriesIsLoading} = useAsyncState(
     axios
-        .get(`${apiUrl}/subsubcategory/all`)
+        .get(`${import.meta.env.VITE_API_URL}/subsubcategory/all`)
         .then(t => t.data),
     [],
     {immediate: true},
@@ -63,23 +76,39 @@ const getSubSubCategories = computedAsync(() => subSubCategories.value
     })
     .map((t: any) => ({label: t.name, value: t.code})));
 
-const getAliments = computedAsync(() => {
+const alimentListToShow = asyncComputed(async () => {
+  const codes = [...(selectedSubCategory.value ?? []), ...(selectedSubSubCategory.value ?? [])]
+      .filter(code => !subCategoryHaveSubSubCategories.includes(code));
 
-  selectedSubCategory.value ??= [];
-  selectedSubSubCategory.value ??= [];
+  const setCodes = new Set();
+  const toReturn = [];
 
-  const codes = [...selectedSubCategory.value, ...selectedSubSubCategory.value];
+  for (const code of codes) {
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/aliment/search/${code}`);
+    res.data.forEach((t: any) => {
+      if (!setCodes.has(t.code)) {
+        setCodes.add(t.code);
+        toReturn.push({label: t.name, value: t.code})
+      }
+    })
+  }
 
-  const r = [];
+  return toReturn;
+})
 
-  codes.filter(code => !subCategoryHaveSubSubCategories.includes(code))
-      .forEach(async c => {
-        const res = await axios.get(`${apiUrl}/aliment/search/${c}`);
-        r.push(...res.data.map((t: any) => ({label: t.name, value: t.code})))
-      })
+const loadAliment = async (code, cachedOption) => {
+  if (cachedOption.hasLoaded) return cachedOption
 
-  return r;
-});
+  const aliment = aliments.value.find((t: any) => t.code === code)
+  if (aliment) {
+    return {
+      name: aliment.name,
+      label: aliment.name,
+      value: aliment.code,
+      hasLoaded: true,
+    }
+  }
+}
 
 const resetIfEmpty = (v: string[], _node: any) => {
   if (v === null || v.length === 0) {
@@ -98,18 +127,45 @@ watchEffect(() => {
 
   haveSubElements.value = getSubSubCategories.value.length > 0
 })
+
+const sendForm = () => {
+  props.formData.aliments = selectedAliments.value;
+
+  const user = JSON.parse(JSON.stringify(props.formData.user));
+
+  let userId = 0;
+
+  axios
+      .post(`${import.meta.env.VITE_API_URL}/user/create`, user)
+      .then((res) => {
+        userId = res.data.id
+      })
+      .then(() => {
+        for (const aliment of selectedAliments.value) {
+          axios.post(`${import.meta.env.VITE_API_URL}/survey/create`, {
+            userId,
+            alimentCode: aliment,
+          })
+        }
+      }).then(() => {
+
+        next();
+
+  })
+}
+
 </script>
 
 <template>
   <header>
-    <h2 class="uppercase">Vos choix</h2>
+    <h2 class="uppercase center">Vos choix</h2>
     <h3 class="justify">Afin de remplir le formulaire, veuillez choisir vos dix aliments préférés.</h3>
   </header>
 
   <FormKit
       type="form"
-      #default="{ value }"
       :actions="false"
+      @submit="sendForm"
   >
     <FormKit
         v-if="categoriesIsReady"
@@ -140,26 +196,29 @@ watchEffect(() => {
         :options="getSubSubCategories"
 
     />
-
     <FormKit
-        v-if="selectedSubCategory !== null && selectedSubCategory.length > 0 && (!haveSubElements || selectedSubSubCategory !== null && selectedSubSubCategory.length > 0)"
-        type="transferlist"
+        v-if="selectedAliments.length > 0 || (selectedSubCategory !== null && selectedSubCategory.length > 0 && (!haveSubElements || selectedSubSubCategory !== null && selectedSubSubCategory.length > 0))"
         name="aliments"
-        label="Choisissez vos aliments"
-        :options="() => {
-          console.log(getAliments)
-          return getAliments;
-        }"
-        }
+        type="transferlist"
+        label="Choisissez vos aliments favoris"
+        source-label="Aliments disponible"
+        target-label="Aliments selectionnés"
+        target-empty-message="Aucun aliment selectionné"
+        :options="alimentListToShow"
+        v-model="selectedAliments"
+        :option-loader="loadAliment"
         max="10"
     />
 
-    <pre>
-      {{ selectedCategory }}
-      {{ selectedSubCategory }}
-      {{ selectedSubSubCategory }}
-      {{ getAliments }}
-    </pre>
+    <div class="center full-width">
+      <FormKit
+          v-if="selectedAliments.length > 0 || (selectedSubCategory !== null && selectedSubCategory.length > 0 && (!haveSubElements || selectedSubSubCategory !== null && selectedSubSubCategory.length > 0))"
+          type="submit"
+          :prefix-icon="selectedAliments.length < 10 ? 'close' : 'check'"
+          :label="selectedAliments.length < 10 ? `Il vous reste ${10 - selectedAliments.length} aliments à choisir` : 'Envoyer !'"
+          :disabled="selectedAliments.length < 10"
+      />
+    </div>
 
   </FormKit>
 </template>

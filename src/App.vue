@@ -4,23 +4,25 @@ import {ref} from "vue";
 import Welcome from "./components/Form/Welcome.vue";
 import Userdata from "./components/Form/Userdata.vue";
 import Selection from "./components/Form/Selection.vue";
+import End from "./components/End.vue";
 
-const form = ref(0);
+const formStep = ref(0);
+
+const formData = ref( {user: {}, aliments: []});
 
 const nextForm = () => {
-  form.value++;
+  formStep.value++;
 }
 
 </script>
 
 <template>
-
   <div v-auto-animate>
-    <Welcome v-if="form === 0" @next="nextForm"/>
-    <Userdata v-if="form === 1" @next="nextForm"/>
-    <Selection v-if="form === 2" @next="nextForm"/>
+    <Welcome v-if="formStep === 0" @next="nextForm"/>
+    <Userdata v-if="formStep === 1" @next="nextForm" :form-data="formData"/>
+    <Selection v-if="formStep === 2" @next="nextForm" :form-data="formData"/>
+    <End v-if="formStep === 3"/>
   </div>
-
 </template>
 
 <style scoped>

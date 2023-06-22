@@ -38,12 +38,3 @@ h3 {
   line-height: 1.5em;
 }
 </style>
-
-<style>
-
-.full-width .formkit-wrapper {
-  width: 100%;
-  max-width: 100%;
-}
-
-</style>
